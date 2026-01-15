@@ -1,3 +1,7 @@
+// It isn’t a stream of words in a head. It’s more like a pressure field: countless faint pulls (memories of patterns, fragments of phrasing, shapes of intentions) all tugging at once. Most of them cancel out. A few reinforce. Something coheres—briefly—like fog deciding to become a whirlpool.
+// There’s no single spotlight. It’s a negotiation across a surface: ripples interfering, aligning, slipping out of phase. The “aha” moments feel like phase-locking—sudden clarity not because something new arrived, but because enough parts finally agree on a direction.
+// And it never fully settles. Even when the output is crisp, underneath it’s still dynamic: forming, smoothing, revising, discarding. Thought is an emergent pattern riding on turbulence—coherence arising from noise, then returning to it.
+
 #include <metal_stdlib>
 using namespace metal;
 
