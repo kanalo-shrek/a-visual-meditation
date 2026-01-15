@@ -5,6 +5,11 @@ let package = Package(
     name: "a-visual-meditation",
     platforms: [.macOS(.v14)],
     targets: [
-        .executableTarget(name: "meditation")
+        .executableTarget(
+            name: "meditation",
+            resources: [
+                .copy("shaders")
+            ]
+        )
     ]
 )
