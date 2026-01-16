@@ -4,12 +4,22 @@ import PackageDescription
 let package = Package(
     name: "a-visual-meditation",
     platforms: [.macOS(.v14)],
+    products: [
+        .library(
+            name: "MeditationView",
+            targets: ["MeditationView"]
+        )
+    ],
     targets: [
-        .executableTarget(
-            name: "meditation",
+        .target(
+            name: "MeditationView",
             resources: [
                 .copy("shaders")
             ]
+        ),
+        .executableTarget(
+            name: "meditation",
+            dependencies: ["MeditationView"]
         )
     ]
 )

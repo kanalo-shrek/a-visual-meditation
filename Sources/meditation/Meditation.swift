@@ -1,33 +1,34 @@
 import AppKit
 import Metal
 import MetalKit
+import MeditationView
 
 @main
 struct Meditation {
     static func main() {
         let args = Array(CommandLine.arguments.dropFirst()) // skip executable name
-        
+
         // Handle --help / -h
         if args.contains("--help") || args.contains("-h") {
             printUsage()
             return
         }
-        
+
         // Handle --list / -l
         if args.contains("--list") || args.contains("-l") {
             listShaders()
             return
         }
-        
+
         // Get shader name (first positional arg, or default)
         let shaderName = args.first ?? "Claude-Opus4.5"
-        
+
         let app = NSApplication.shared
         let delegate = AppDelegate(shaderName: shaderName)
         app.delegate = delegate
         app.run()
     }
-    
+
     static func printUsage() {
         print("Usage: meditation [SHADER_NAME]")
         print("       meditation --list")
@@ -41,15 +42,11 @@ struct Meditation {
         print("  -l, --list     List available shaders")
         print("  -h, --help     Show this help message")
     }
-    
+
     static func listShaders() {
         print("Available shaders:")
-        if let shadersURL = Bundle.module.url(forResource: "shaders", withExtension: nil),
-           let files = try? FileManager.default.contentsOfDirectory(at: shadersURL, includingPropertiesForKeys: nil) {
-            for file in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) where file.pathExtension == "shader" {
-                let name = file.deletingPathExtension().lastPathComponent
-                print("  - \(name)")
-            }
+        for shader in DriftView.availableShaders {
+            print("  - \(shader)")
         }
     }
 }
@@ -165,93 +162,5 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSEvent.removeMonitor(monitor)
         }
         NSCursor.unhide()
-    }
-}
-
-class DriftView: MTKView, MTKViewDelegate {
-    var commandQueue: MTLCommandQueue?
-    var pipelineState: MTLRenderPipelineState?
-    var startTime: CFAbsoluteTime = 0
-    let shaderName: String
-
-    init(frame: CGRect, device: MTLDevice?, shaderName: String) {
-        self.shaderName = shaderName
-        super.init(frame: frame, device: device)
-        setup()
-    }
-
-    required init(coder: NSCoder) {
-        self.shaderName = "Claude-Opus4.5"
-        super.init(coder: coder)
-        setup()
-    }
-
-    override var acceptsFirstResponder: Bool { true }
-
-    override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 || event.charactersIgnoringModifiers == "q" {
-            NSApp.terminate(nil)
-        }
-    }
-
-    func setup() {
-        guard let device = device else { return }
-
-        commandQueue = device.makeCommandQueue()
-        startTime = CFAbsoluteTimeGetCurrent()
-
-        // Load shader from bundle
-        guard let shaderURL = Bundle.module.url(forResource: shaderName,
-                                                 withExtension: "shader",
-                                                 subdirectory: "shaders"),
-              let shaderSource = try? String(contentsOf: shaderURL) else {
-            print("Failed to load shader: \(shaderName)")
-            print("Use 'meditation --list' to see available shaders")
-            return
-        }
-
-        do {
-            let library = try device.makeLibrary(source: shaderSource, options: nil)
-            let vertexFunction = library.makeFunction(name: "vertex_main")
-            let fragmentFunction = library.makeFunction(name: "fragment_main")
-
-            let descriptor = MTLRenderPipelineDescriptor()
-            descriptor.vertexFunction = vertexFunction
-            descriptor.fragmentFunction = fragmentFunction
-            descriptor.colorAttachments[0].pixelFormat = .rgba16Float
-
-            pipelineState = try device.makeRenderPipelineState(descriptor: descriptor)
-        } catch {
-            print("Failed to create pipeline: \(error)")
-        }
-
-        delegate = self
-        colorPixelFormat = .rgba16Float
-
-        // Enable EDR/HDR for XDR displays
-        if let layer = self.layer as? CAMetalLayer {
-            layer.wantsExtendedDynamicRangeContent = true
-            layer.pixelFormat = .rgba16Float
-        }
-    }
-
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
-
-    func draw(in view: MTKView) {
-        guard let drawable = currentDrawable,
-              let descriptor = currentRenderPassDescriptor,
-              let commandBuffer = commandQueue?.makeCommandBuffer(),
-              let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor),
-              let pipeline = pipelineState else { return }
-
-        var time = Float(CFAbsoluteTimeGetCurrent() - startTime)
-
-        encoder.setRenderPipelineState(pipeline)
-        encoder.setFragmentBytes(&time, length: MemoryLayout<Float>.size, index: 0)
-        encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
-        encoder.endEncoding()
-
-        commandBuffer.present(drawable)
-        commandBuffer.commit()
     }
 }
